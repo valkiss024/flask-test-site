@@ -5,7 +5,11 @@
     <title>Dashboard</title>
 </head>
 <body>
-<h2>Welcome to your Dashboard, {{ user.first_name }}!</h2>
+{% if user.__class__ == 'app.User' %}
+    <h2>Welcome to your Dashboard, {{ user.first_name }}!</h2>
+{% else %}
+    <h2>Welcome to the Dashboard for {{ user.name }}</h2>
+{% endif %}
 
 <a href="{{ url_for('logout') }}">Logout</a>
 

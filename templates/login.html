@@ -2,10 +2,16 @@
 {% block title %}Login to Dashboard!{% endblock %}
 
 {% block container %}
-{% with messages = get_flashed_messages() %}
+{% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
-        {% for message in messages %}
-            <h4>{{ message }}</h4>
+        {% for category, message in messages %}
+            {% if category == 'error' %}
+                <h4 class="alert alert-danger">{{ message }}</h4>
+            {% elif category == 'info' %}
+                <h4 class="alert alert-info">{{ message }}</h4>
+            {% else %}
+                <h4 class="alert alert-success">{{ message }}</h4>
+            {% endif %}
         {% endfor %}
     {% endif %}
 {% endwith %}
@@ -23,12 +29,15 @@
         <div class="card-subtitle mb-4 text-center">
             <h6>Please sign in to access your Dashboard</h6>
         </div>
-        <fieldset class="form-group">
-            {{ form.email }}
-            {{ form.password }}
+        <fieldset class="form-group text-center">
+            <ul style="list-style-type: none">
+                <li class="m-2">{{ form.email }}</li>
+                <li class="m-2">{{ form.password }}</li>
+                <li class="m-2">{{ form.is_organization.label }} {{ form.is_organization }}</li>
+            </ul>
             {{ form.submit }}
         </fieldset>
-        <p class="text-muted mt-3">Looking to create an organization? <a href="{{ url_for('register') }}">Click here!</a></p>
+        <p class="text-muted mt-3 text-center">Looking to create an organization? <a href="{{ url_for('register') }}">Click here!</a></p>
     </div>
 </form>
 {% endblock %}

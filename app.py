@@ -3,8 +3,8 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin, LoginManager, login_required, login_user, logout_user, current_user
 from flask_wtf import FlaskForm
 from werkzeug.security import generate_password_hash, check_password_hash
-from wtforms import StringField, EmailField, TelField, PasswordField, SubmitField
-from wtforms.validators import InputRequired, Length, Email, ValidationError, StopValidation
+from wtforms import StringField, EmailField, TelField, PasswordField, SubmitField, BooleanField
+from wtforms.validators import InputRequired, Length, Email, ValidationError
 
 app = Flask(__name__)  # Instantiate Flask object - app
 app.config['SECRET_KEY'] = 'secret'  # Encrypted key to access session ID(linking the user to the server side)
@@ -20,19 +20,21 @@ db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+login_manager.login_message_category = 'error'
 
 
 @login_manager.user_loader
 def load_user(user_id):
     user = User.query.filter_by(id=user_id).first()
     org = Organization.query.filter_by(id=user_id).first()
-    if (not user and not org):
+    if not user and not org:
         return None
     return org if org else user
 
 
 # Create the user table in the db
 class User(db.Model, UserMixin):
+    # noinspection SpellCheckingInspection
     __tablename__ = 'users'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -59,6 +61,7 @@ class User(db.Model, UserMixin):
 
 
 class Organization(db.Model, UserMixin):
+    # noinspection SpellCheckingInspection
     __tablename__ = 'organizations'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -72,7 +75,7 @@ class Organization(db.Model, UserMixin):
         self.name = name
         self.email = email
         self.location = location
-        self.approved = False  # All new orgs created not approved
+        self.approved = False  # All new organizations created not approved
 
     def __repr__(self):
         return f'Organization({self.name}, {self.email}, {self.location}, {self.approved})'
@@ -97,7 +100,7 @@ class OrganisationRegisterForm(FlaskForm):
     # TODO: Add country/city/street/num/post code??
     password = PasswordField(label='Password:', validators=[InputRequired(), Length(min=8, max=40)])
     confirm_password = PasswordField(label='Confirm Password:', validators=[InputRequired(), Length(min=8, max=40)])
-    submit = SubmitField('Register')
+    submit = SubmitField('Register', render_kw={'style': 'text-center'})
 
     # TODO: How to validated new organisation registration request? email / name / location unique??
 
@@ -131,19 +134,34 @@ class LoginForm(FlaskForm):
                        render_kw={'placeholder': 'Email Address'})
     password = PasswordField(validators=[InputRequired(), Length(min=8, max=40)],
                              render_kw={'placeholder': 'Password'})
+    is_organization = BooleanField(label='I am an organization:')
     submit = SubmitField('Login')
 
     def validate_email(self, email):
-        user = Organization.query.filter_by(email=email.data).first()
-        print(user)
-        if not user:
-            raise ValidationError('Email address doesn\'t exists!')
+        if not self.is_organization.data:
+            user = User.query.filter_by(email=email.data).first()
+            print(user)
+            if not user:
+                raise ValidationError(f'No user associated with: {email.data}')
+            self.pass_validator(user)
+        else:
+            org = Organization.query.filter_by(email=email.data).first()
+            print(org)
+            if not org:
+                raise ValidationError(f'No organization associated with: {email.data}')
+            self.pass_validator(org)
+            if not org.approved:
+                raise ValidationError('Registration request has not been approved yet!')
 
-    def validate_password(self, password):
+    """def validate_password(self, password):
         user = Organization.query.filter_by(email=self.email.data).first()
         if user:
             if not user.validate_password_hash(password.data):
-                raise ValidationError('Incorrect password!')
+                raise ValidationError('Incorrect password!')"""
+
+    def pass_validator(self, user):
+        if not user.validate_password_hash(self.password.data):
+            raise ValidationError('Incorrect password!')
 
 
 # Create endpoints
@@ -153,7 +171,10 @@ def login():
     """This endpoint handles the logic for logging users in to see dashboard"""
     login_form = LoginForm()
     if login_form.validate_on_submit():
-        user = Organization.query.filter_by(email=login_form.email.data).first()
+        if login_form.is_organization.data:
+            user = Organization.query.filter_by(email=login_form.email.data).first()
+        else:
+            user = User.query.filter_by(email=login_form.email.data).first()
         if user and user.validate_password_hash(login_form.password.data):
             login_user(user)
             return redirect(url_for('dashboard'))
@@ -169,9 +190,9 @@ def register():
     if register_form.validate_on_submit():
         # Create the new User object
         new_org = Organization(
-            name = register_form.name.data,
-            email = register_form.email_address.data,
-            location = register_form.location.data
+            name=register_form.name.data,
+            email=register_form.email_address.data,
+            location=register_form.location.data
         )
 
         new_org.create_password_hash(register_form.password.data)
@@ -190,7 +211,7 @@ def register():
         db.session.commit()
         # Redirect the user to the login page
         # flash('Account created successfully!')
-        flash('Account has been registered successfully, please wait for approval!')
+        flash('Account has been registered successfully, please wait for approval!', 'success')
         return redirect(url_for('login'))
     return render_template('register_org.html', form=register_form)
 
@@ -198,6 +219,7 @@ def register():
 @app.route('/dashboard')
 @login_required  # Only accessible if the user if logged in
 def dashboard():
+    print(current_user.__class__)
     return render_template('dashboard.html', user=current_user)
 
 
@@ -205,7 +227,7 @@ def dashboard():
 @login_required
 def logout():
     logout_user()
-    flash('Logged out successfully!')
+    flash('Logged out successfully!', 'success')
     return redirect(url_for('login'))
 
 

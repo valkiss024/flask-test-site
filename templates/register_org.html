@@ -16,14 +16,14 @@
                 <h6>Please register your Organization!</h6>
             </div>
             <fieldset class="form-group">
-                <div class="form-group text-center">
-                <li class="m-2">{{ form.name.label }} {{ form.name }}</li>
-                <li class="m-2">{{ form.email_address.label }} {{ form.email_address }}</li>
-                <li class="m-2">{{ form.location.label }} {{ form.location }}</li>
-                <li class="m-2">{{ form.password.label }} {{ form.password }}</li>
-                <li class="m-2">{{ form.confirm_password.label }} {{ form.confirm_password }}</li>
-                <br>
-                {{ form.submit }}
+                <ul style="list-style-type: none">
+                    <li class="m-2">{{ form.name.label }} {{ form.name }}</li>
+                    <li class="m-2">{{ form.email_address.label }} {{ form.email_address }}</li>
+                    <li class="m-2">{{ form.location.label }} {{ form.location }}</li>
+                    <li class="m-2">{{ form.password.label }} {{ form.password }}</li>
+                    <li class="m-2">{{ form.confirm_password.label }} {{ form.confirm_password }}</li>
+                </ul>
+                <div class="text-center mt-2">{{ form.submit }}</div>
             </fieldset>
             <p class="text-muted mt-3 text-center">Already have an account? <a href="{{ url_for('login') }}">Sign in!</a></p>
         </div>

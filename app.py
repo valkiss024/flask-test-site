@@ -25,9 +25,10 @@ login_manager.login_view = 'login'
 @login_manager.user_loader
 def load_user(user_id):
     user = User.query.filter_by(id=user_id).first()
-    if user:
-        return user
-    return None
+    org = Organization.query.filter_by(id=user_id).first()
+    if (not user and not org):
+        return None
+    return org if org else user
 
 
 # Create the user table in the db
@@ -39,7 +40,7 @@ class User(db.Model, UserMixin):
     last_name = db.Column(db.String(50), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     contact_number = db.Column(db.String(13), nullable=True)
-    password = db.Column(db.String(120))
+    password = db.Column(db.String(120), nullable=False)
 
     def __init__(self, first_name, last_name, email, contact_number):
         self.first_name = first_name
@@ -49,6 +50,32 @@ class User(db.Model, UserMixin):
 
     def __repr__(self):
         return f'User({self.first_name}, {self.last_name}, {self.email}, {self.contact_number})'
+
+    def create_password_hash(self, password):
+        self.password = generate_password_hash(password=password)
+
+    def validate_password_hash(self, password):
+        return check_password_hash(pwhash=self.password, password=password)
+
+
+class Organization(db.Model, UserMixin):
+    __tablename__ = 'organizations'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(40), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    location = db.Column(db.String(120), nullable=False)  # country/city/etc..
+    approved = db.Column(db.Boolean, nullable=False)
+    password = db.Column(db.String(120), nullable=False)
+
+    def __init__(self, name, email, location):
+        self.name = name
+        self.email = email
+        self.location = location
+        self.approved = False  # All new orgs created not approved
+
+    def __repr__(self):
+        return f'Organization({self.name}, {self.email}, {self.location}, {self.approved})'
 
     def create_password_hash(self, password):
         self.password = generate_password_hash(password=password)
@@ -89,6 +116,7 @@ class UserRegisterForm(FlaskForm):
     contact_number = TelField(validators=[Length(max=13)], render_kw={'placeholder': 'Contact Number'})
     password = PasswordField(validators=[InputRequired(), Length(min=8, max=40)],
                              render_kw={'placeholder': 'Password'})
+    # TODO: randomly generated password for user creation ??
     submit = SubmitField('Register')
 
     def validate_email_address(self, email_address):
@@ -106,12 +134,13 @@ class LoginForm(FlaskForm):
     submit = SubmitField('Login')
 
     def validate_email(self, email):
-        user = User.query.filter_by(email=email.data).first()
+        user = Organization.query.filter_by(email=email.data).first()
+        print(user)
         if not user:
             raise ValidationError('Email address doesn\'t exists!')
 
     def validate_password(self, password):
-        user = User.query.filter_by(email=self.email.data).first()
+        user = Organization.query.filter_by(email=self.email.data).first()
         if user:
             if not user.validate_password_hash(password.data):
                 raise ValidationError('Incorrect password!')
@@ -124,7 +153,7 @@ def login():
     """This endpoint handles the logic for logging users in to see dashboard"""
     login_form = LoginForm()
     if login_form.validate_on_submit():
-        user = User.query.filter_by(email=login_form.email.data).first()
+        user = Organization.query.filter_by(email=login_form.email.data).first()
         if user and user.validate_password_hash(login_form.password.data):
             login_user(user)
             return redirect(url_for('dashboard'))
@@ -135,10 +164,20 @@ def login():
 @app.route('/signup', methods=['GET', 'POST'])
 def register():
     """This endpoint handles the logic for creating new users"""
-    register_form = UserRegisterForm()  # Create a registration form instance
+    # register_form = UserRegisterForm()  # Create a registration form instance
+    register_form = OrganisationRegisterForm()
     if register_form.validate_on_submit():
         # Create the new User object
-        new_user = User(
+        new_org = Organization(
+            name = register_form.name.data,
+            email = register_form.email_address.data,
+            location = register_form.location.data
+        )
+
+        new_org.create_password_hash(register_form.password.data)
+        db.session.add(new_org)
+
+        """new_user = User(
             first_name=register_form.first_name.data,
             last_name=register_form.last_name.data,
             email=register_form.email_address.data,
@@ -147,12 +186,13 @@ def register():
         # Add the hashed password to the user object
         new_user.create_password_hash(register_form.password.data)
         # Save the user to the database
-        db.session.add(new_user)
+        db.session.add(new_user)"""
         db.session.commit()
         # Redirect the user to the login page
-        flash('Account created successfully!')
+        # flash('Account created successfully!')
+        flash('Account has been registered successfully, please wait for approval!')
         return redirect(url_for('login'))
-    return render_template('register.html', form=register_form)
+    return render_template('register_org.html', form=register_form)
 
 
 @app.route('/dashboard')

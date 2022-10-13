@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block title %}Sign Up!{% endblock %}
+
+{% block container %}
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+        {% for message in messages %}
+            <h4>{{ message }}</h4>
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
+{% for field, errors in form.errors.items() %}
+    <h4 class="alert alert-danger">{{ ', '.join(errors) }}</h4>
+{% endfor %}
+<form method="post">
+    {{ form.hidden_tag() }}  <!--Cross-site request forgery attack-->
+    <div class="card mx-auto w-50 p-4">
+        <div class="card-title text-center">
+            <h4>Register</h4>
+        </div>
+        <div class="card-subtitle mb-4 text-center">
+            <h6>Please register an account!</h6>
+        </div>
+        <fieldset class="form-group">
+            <div class="form-group text-center">
+                {{ form.first_name }}<p class="text-muted" style="color: red">required</p>
+            </div>
+
+            {{ form.last_name }}
+            {{ form.email }}
+            {{ form.contact_number }}
+            {{ form.password }}
+            {{ form.submit }}
+        </fieldset>
+        <p class="text-muted mt-3">Already have an account? <a href="{{ url_for('login') }}">Sign in!</a></p>
+    </div>
+</form>
+{% endblock %}

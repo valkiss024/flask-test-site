@@ -1,3 +1,6 @@
+from pathlib import Path
+import secrets
+
 from flask import Flask, render_template, flash, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin, LoginManager, login_required, login_user, logout_user, current_user
@@ -7,7 +10,18 @@ from wtforms import StringField, EmailField, TelField, PasswordField, SubmitFiel
 from wtforms.validators import InputRequired, Length, Email, ValidationError
 
 app = Flask(__name__)  # Instantiate Flask object - app
-app.config['SECRET_KEY'] = 'secret'  # Encrypted key to access session ID(linking the user to the server side)
+
+# Encrypted key to access session # ID
+SECRET_FILE_PATH = Path('.flask_secret')
+try:
+    with open(SECRET_FILE_PATH, 'r') as secret_file:
+        app.config['SECRET_KEY'] = secret_file.read()
+except FileNotFoundError:
+    with open(SECRET_FILE_PATH, 'w') as secret_file:
+        app.config['SECRET_KEY'] = secrets.token_hex(32)
+        secret_file.write(app.config['SECRET_KEY'])
+
+# app.config['SECRET_KEY'] = 'secret'  # Encrypted key to access session ID(linking the user to the server side)
 
 # Setup DB connection (SQLite used for simple testing (local storage) - MYSql or Mongo implementation for production)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.sqlite3'  # Configure the database endpoint

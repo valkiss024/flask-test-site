@@ -1,3 +1,8 @@
+<<<<<<< HEAD
 *.sqlite3
 json_reader.py
 Dashboard sample data
+=======
+instance/*.sqlite3
+.flask_secret
+>>>>>>> e9c1d6345c89f8950331c3213adc7f6bb0e01c56
